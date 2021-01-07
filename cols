@@ -1,0 +1,257 @@
+#!/bin/bash
+shopt -s extglob
+
+Version=1.03
+Myname="${0##*/}"
+
+:<<'DOC'
+= cols - distribute words over columns
+
+= Synopsis
+cols [options] [file]	
+
+== Options
+
+-a,--across	print row by row; default: column by column
+-c,--columns=n	print in |n| columns; default: as many as fit in the window
+-H,--Help	print full documentation via less and exit
+-h,--help	print this help and exit
+-s,--squeeze	remove vertical white until the minimum separation between
+		columns is the separator string defined by the |--sep| option
+-V,--version	print version and exit
+-w,--width=n	pretend the window width to be |n| characters
+-[1-9]		-1, -2, ... -9 is equivalent to -c 1, -c 2, ... -c 9
+   --pre=s	prefix each line with the string |s|
+   --sep=s	separate columns with the string |s|; default: one space 
+   --suf=s	add the string |s| as a suffix to each line
+
+= Description
+cols reads words, one word per line, from standard input or from an
+optional file and prints them, in as many columns as are available in the
+current window width or, if the |--width| option was used, the width set by
+that option.
+
+The words are written column by column:
+   $ seq  13|cols --width=20
+   1  3  5  7  9  11 13
+   2  4  6  8  10 12
+
+With the |--across| option, cols writes the words row by row:
+   $ seq  13|cols --width=20 --across
+   1  2  3  4  5  6  7 
+   8  9  10 11 12 13 
+
+The number of columns can be explicitly set with the |--columns| option:
+   $ seq 5 10 133 |cols --columns=4
+   5   45  85  125
+   15  55  95     
+   25  65  105    
+   35  75  115    
+
+The excessive whitespace can be cut out with the |--squeeze| option:
+   $ seq 5 10 153 |cols -4s
+   5  45 85  125
+   15 55 95  135
+   25 65 105 145
+   35 75 115   
+
+The |--sep|, |--pre|, and |--suf| can, for example, be used to create the contents of 
+a LaTeX table. This one is prefixed with |'% '| for a |.dtx| file:
+
+   $ ls / | cols --pre='% ' --sep=' & ' --suf='\\\\'
+   % bin            & initrd.img.old & opt            & usb1          \\
+   % boot           & lib            & proc           & usb2          \\
+   % cdrom          & lib32          & root           & usr           \\
+   % cj             & lib64          & run            & var           \\
+   % dev            & local          & sbin           & vmlinuz       \\
+   % etc            & lost+found     & selinux        & vmlinuz.old   \\
+   % fotos          & media          & srv            & wd            \\
+   % ftp            & mnt            & store          & www           \\
+   % home           & music          & sys            &               \\
+   % initrd.img     & nrc            & tmp            &               \\
+
+The width of each column is fixed to the width of the widest column. The
+|--squeeze| option removes the excess white space:
+
+   $ ls / | cols --pre='% ' --sep=' & ' --suf='\\\\' --squeeze
+   % bin        & initrd.img.old & opt     & usb1       \\
+   % boot       & lib            & proc    & usb2       \\
+   % cdrom      & lib32          & root    & usr        \\
+   % cj         & lib64          & run     & var        \\
+   % dev        & local          & sbin    & vmlinuz    \\
+   % etc        & lost+found     & selinux & vmlinuz.old\\
+   % fotos      & media          & srv     & wd         \\
+   % ftp        & mnt            & store   & www        \\
+   % home       & music          & sys     &            \\
+   % initrd.img & nrc            & tmp     &            \\
+
+This gives room for one or two extra columns, by using the |--columns=6|
+option; this can be shortened to |-6|, and we can even include the
+shorthand for |--squeeze|:
+
+   $ ls / | cols --pre='% ' --sep=' & ' --suf='\\\\' -s6
+   % bin   & ftp            & local      & proc    & sys     & vmlinuz.old\\
+   % boot  & home           & lost+found & root    & tmp     & wd         \\
+   % cdrom & initrd.img     & media      & run     & usb1    & www        \\
+   % cj    & initrd.img.old & mnt        & sbin    & usb2    &            \\
+   % dev   & lib            & music      & selinux & usr     &            \\
+   % etc   & lib32          & nrc        & srv     & var     &            \\
+   % fotos & lib64          & opt        & store   & vmlinuz &            \\
+
+= Author
+[Wybo Dekker](wybo@dekkerdocumenten.nl)
+
+= Copyright
+Released under the [GNU General Public License](www.gnu.org/copyleft/gpl.html)
+DOC
+
+REd='\e[38;5;9m' Mag='\e[38;5;5m' Nor='\e[0m'
+    die() { local i; for i; do echo -e "$Myname: $REd$i$Nor"; done 1>&2; exit 1; }
+   Warn() { local i; for i; do echo -e "$Myname: $Mag$i$Nor"; done 1>&2; }
+   warn() { $verbose && Warn "$@"; }
+helpsrt() { sed -n '/^= Synopsis/,/^= /p' "$0"|sed '1d;$d'; exit; }
+helpall() { sed -n "/^:<<'DOC'$/,/^DOC/p" "$0"|sed -n '1d;$d;p'|
+            less -Ps"$Myname-${Version/./·} documentation - type h for help, q to quit."
+		exit
+	  }
+
+:<<'DOC' #----------------------------------------------------------------------
+= handle_options
+synopsis:	 handle_options "$@"
+description:	handle the options.
+globals used:	 Myname Version
+globals  set:	 args squeeze across sep pre suf cols
+returns:	the number of remaning arguments
+DOC
+#-------------------------------------------------------------------------------
+handle_options() {
+   local options
+   if ! options=$(getopt \
+      -n "$Myname" \
+      -o hHVIasc:w:123456789 \
+      -l help,Help,version,across,squeeze,sep:,pre:,suf:,columns:,width: -- "$@"
+   ); then exit 1; fi
+   eval set -- "$options"
+   squeeze=false across=false sep=' ' pre='' suf='' cols=''
+   while [ $# -gt 0 ]; do
+      case $1 in
+      (-h|--help)    # print this help and exit
+		     helpsrt
+		     ;;
+      (-H|--Help)    # print full documentation via less and exit
+		     helpall
+		     ;;
+      (-V|--version) # print version and exit
+		     echo $Version
+		     exit
+		     ;;
+      (-a|--across)  # print row by row; default: column by column
+		     across=true
+		     shift
+		     ;;
+      (-c|--columns) # print in |n| columns; the default is to print as
+		     # many columns as fit in the width of the window
+		     cols=$2
+		     shift 2
+		     ;;
+      (-s|--squeeze) # remove vertical white until the minimum separation between
+		     # columns is the separator string defined by the |--sep| option
+		     squeeze=true
+		     shift
+		     ;;
+      (-w|--width)   # pretend the window width to be |n| characters
+		     width=$2
+		     shift 2
+		     ;;
+      (   --sep)     # separate columns with the string |s|; default: one space
+		     sep=${2//%/%%}
+		     shift 2
+		     ;;
+      (   --pre)     # prefix each line with the string |s|
+		     pre=${2//%/%%}
+		     shift 2
+		     ;;
+      (   --suf)     # add the string |s| as a suffix to each line
+		     suf=${2//%/%%}
+		     shift 2
+		     ;;
+      (-[1-9])       # -1, -2, ... -9 is equivalent to -c 1, -c 2, ... -c 9
+		     cols=${1#-}
+		     shift
+		     ;;
+      (-I)	     instscript "$0" ||
+			die 'the -I option is for developers only'
+		     exit
+		     ;;
+      (--)           shift
+		     break
+		     ;;
+      (*)            break
+		     ;;
+      esac
+   done
+   args=( "$@" )
+   return ${#args}
+}
+
+temp=$(mktemp -t "$Myname.XXXXXXXXXX")
+trap 'rm -f $temp' 0 1 2 15
+
+handle_options "$@" || set "${args[@]}"
+test $# -le 1 || die "I expect 0 or 1 input file"
+
+maxlen=0 a=() seplen=${#sep} 
+# available width = window width minus the lengths of prefix and suffix:
+: "${width:=$(tput cols)}" # unset? then make it the window width
+(( width=width-${#pre}-${#suf} ))
+
+# copy to temp while stripping white off and determining max word length:
+umask 077 # -rw------- permissions
+while read -r x; do
+   x=${x##[[:space:]]}
+   x=${x%%[[:space:]]}
+   (( ${#x} > maxlen )) && maxlen=${#x}
+   echo "$x"
+   a+=("$x")
+done <"${1:-/dev/stdin}" >"$temp"
+
+# max number of unsqueezed columns:
+[[ -z $cols ]] && (( cols=(width+seplen)/(maxlen+seplen) ))
+n=${#a[@]}
+((rows=(n+cols-1)/cols))
+
+maxlen=()
+for ((row=0;row<rows;row++)); do
+   for ((col=0;col<cols;col++)); do
+      if $across; then
+         ((i=col+row*cols))
+      else
+         ((i=row+col*rows))
+      fi
+      el=${a[i]}
+      : "${maxlen[$col]:=0}"
+      (( ${#el} > maxlen[col] )) && maxlen[$col]=${#el}
+   done
+done
+# if squeeze, then use each column's own width,
+# otherwise, use the maximum width for each column
+$squeeze || max=$(printf "%d\n" "${maxlen[@]}" | sort -n | tail -1)
+format=
+for i in "${maxlen[@]}"; do 
+   format+="%-${max:-$i}s$sep"
+done
+format="$pre${format%$sep}$suf\n"
+
+for ((row=0;row<rows;row++)); do
+   r=()
+   for ((col=0;col<cols;col++)); do
+      if $across; then
+         ((i=col+row*cols))
+      else
+         ((i=row+col*rows))
+      fi
+      r+=("${a[i]}")
+   done
+   # shellcheck disable=SC2059
+   printf "$format" "${r[@]}"
+done

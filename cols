@@ -197,7 +197,7 @@ handle_options() {
 temp=$(mktemp -t "$Myname.XXXXXXXXXX")
 trap 'rm -f $temp' 0 1 2 15
 
-handle_options "$@" || set "${args[@]}"
+if handle_options "$@"; then set ''; else set "${args[@]}"; fi
 test $# -le 1 || die "I expect 0 or 1 input file"
 
 maxlen=0 a=() seplen=${#sep} 

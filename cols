@@ -12,18 +12,19 @@ cols [options] [file]
 
 == Options
 
--a,--across	print row by row; default: column by column
--c,--columns=n	print in |n| columns; default: as many as fit in the window
--H,--Help	print full documentation via less and exit
 -h,--help	print this help and exit
+-H,--Help	print full documentation via less and exit
+-V,--version	print version and exit
+-a,--across	print row by row; default: column by column
+-c,--columns=X	print in X columns; the default is to print as
+		many columns as fit in the width of the window
 -s,--squeeze	remove vertical white until the minimum separation between
 		columns is the separator string defined by the |--sep| option
--V,--version	print version and exit
--w,--width=n	pretend the window width to be |n| characters
+-w,--width=X	pretend the window width to be X characters
+   --sep=X	separate columns with the string X; default: one space
+   --pre=X	prefix each line with the string X
+   --suf=X	add the string X as a suffix to each line
 -[1-9]		-1, -2, ... -9 is equivalent to -c 1, -c 2, ... -c 9
-   --pre=s	prefix each line with the string |s|
-   --sep=s	separate columns with the string |s|; default: one space 
-   --suf=s	add the string |s| as a suffix to each line
 
 = Description
 cols reads words, one word per line, from standard input or from an
@@ -146,7 +147,7 @@ handle_options() {
 		     across=true
 		     shift
 		     ;;
-      (-c|--columns) # print in |n| columns; the default is to print as
+      (-c|--columns) # print in X columns; the default is to print as
 		     # many columns as fit in the width of the window
 		     cols=$2
 		     shift 2
@@ -156,19 +157,19 @@ handle_options() {
 		     squeeze=true
 		     shift
 		     ;;
-      (-w|--width)   # pretend the window width to be |n| characters
+      (-w|--width)   # pretend the window width to be X characters
 		     width=$2
 		     shift 2
 		     ;;
-      (   --sep)     # separate columns with the string |s|; default: one space
+      (   --sep)     # separate columns with the string X; default: one space
 		     sep=${2//%/%%}
 		     shift 2
 		     ;;
-      (   --pre)     # prefix each line with the string |s|
+      (   --pre)     # prefix each line with the string X
 		     pre=${2//%/%%}
 		     shift 2
 		     ;;
-      (   --suf)     # add the string |s| as a suffix to each line
+      (   --suf)     # add the string X as a suffix to each line
 		     suf=${2//%/%%}
 		     shift 2
 		     ;;

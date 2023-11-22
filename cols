@@ -33,16 +33,19 @@ current window width or, if the |--width| option was used, the width set by
 that option.
 
 The words are written column by column:
+
    $ seq  13|cols --width=20
    1  3  5  7  9  11 13
    2  4  6  8  10 12
 
 With the |--across| option, cols writes the words row by row:
+
    $ seq  13|cols --width=20 --across
    1  2  3  4  5  6  7 
    8  9  10 11 12 13 
 
 The number of columns can be explicitly set with the |--columns| option:
+
    $ seq 5 10 133 |cols --columns=4
    5   45  85  125
    15  55  95     
@@ -50,6 +53,7 @@ The number of columns can be explicitly set with the |--columns| option:
    35  75  115    
 
 The excessive whitespace can be cut out with the |--squeeze| option:
+
    $ seq 5 10 153 |cols -4s
    5  45 85  125
    15 55 95  135
@@ -229,7 +233,7 @@ for ((row=0;row<rows;row++)); do
       fi
       el=${a[i]}
       : "${maxlen[$col]:=0}"
-      (( ${#el} > maxlen[col] )) && maxlen[$col]=${#el}
+      (( ${#el} > maxlen[col] )) && maxlen[col]=${#el}
    done
 done
 # if squeeze, then use each column's own width,
@@ -239,7 +243,7 @@ format=
 for i in "${maxlen[@]}"; do 
    format+="%-${max:-$i}s$sep"
 done
-format="$pre${format%$sep}$suf\n"
+format="$pre${format%"$sep"}$suf\n"
 
 for ((row=0;row<rows;row++)); do
    r=()
